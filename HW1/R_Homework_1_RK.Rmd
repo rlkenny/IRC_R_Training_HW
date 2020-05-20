@@ -1,0 +1,140 @@
+---
+title: "Homework_1_RK"
+author: "Rachel Kenny"
+date: "3/27/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load packages
+```{r packages}
+
+library(tidyverse) 
+library(rmarkdown) 
+library(readxl)
+library(janitor) 
+
+```
+
+## Load data
+```{r data}
+
+ac_data_raw <- read_xlsx("OCWR_AC_2019_Data.xlsx") 
+# View(ac_data_raw)
+
+ac_data <- ac_data_raw %>% 
+  clean_names()
+# View(ac_data)
+
+# Review the updated variable names
+names(ac_data)
+
+```
+
+## Create dataframes using select
+```{r df}
+
+# Create dataframe 1
+df1 <- ac_data %>% 
+  select(polygon_id, pin_number, transect, species_code)
+
+# Create dataframe 2
+df2 <- ac_data %>% 
+  select(native_non_native, functional_group, layer)
+
+# Create dataframe 3
+df3 <- ac_data %>% 
+  select(data_type, desired_habitat, scientific_name)
+
+```
+
+
+## Create dataframes using filter
+```{r df2}
+
+# Create dataframe 1
+df_1 <- ac_data %>% 
+  filter(native_non_native=="Non-Native")
+
+# Create dataframe 2
+# Option 1 - the "|" symbol means or
+df_2 <- ac_data %>% 
+  filter(functional_group=="Perennial Forb - Other" | functional_group=="Perennial Forb - Late Flowering" | functional_group=="Perennial Grass - Other")
+
+# Option 2 - %in% indicates all the following are included. This is the cleaner option.
+df_2 <- ac_data %>% 
+  filter(functional_group %in% c("Perennial Forb - Other", "Perennial Forb - Late Flowering", "Perennial Grass - Other"))
+
+# Create dataframe 3
+# Option 1 - use the pipe operator to complete two filters
+df_3 <- ac_data %>% 
+  filter(native_non_native=="Native") %>% 
+  filter(data_type=="T.PI")
+
+# Option 2 - use the [&] symbol to complete two filters. This is the cleaner option.
+df_3 <- ac_data %>% 
+  filter(native_non_native=="Native" & data_type=="T.PI")
+
+# Create dataframe 4
+df_4 <- ac_data %>% 
+  filter(pin_number <= 25)
+
+```
+
+
+## Plots
+```{r}
+
+# Note the use of different themes in the code (theme_classic, theme_minimal, theme_grey)
+
+# Create plot 1
+plot1 <- ggplot(ac_data, aes(layer)) +
+  geom_bar(fill="turquoise4") +
+  xlab("Layer") +
+  ylab("Count") +
+  ggtitle("Count of layers in Agua Chinon") +
+  scale_x_discrete(expand=c(0.2,0)) +
+  scale_y_continuous(expand=c(0,0)) +
+  theme_classic()
+
+plot1
+
+
+# Create plot 2 - Note the use of [\n] to create a line break in the title, the use of theme() to make the title bold & serif
+plot2 <- ggplot(df_1, aes(functional_group)) +
+  geom_bar(fill="magenta4") +
+  xlab("Functional group") +
+  ylab("Count") +
+  ggtitle("Count of Non-Native Species in \nAgua Chinon by Functional Group") +
+  scale_x_discrete(expand=c(0.3,0)) +
+  scale_y_continuous(expand=c(0,0)) +
+  theme_minimal() +
+  theme(plot.title=element_text(face="bold", family = "serif"))
+
+plot2
+
+
+# Create plot 3 - Note the angling of the labels in the theme() code, the bold face of the axis titles, and the y axis limits from 0-300
+plot3 <- ggplot(df_3, aes(desired_habitat)) +
+  geom_bar(fill="gold3") +
+  xlab("Desired habitat") +
+  ylab("Count") +
+  ggtitle("Count of Native Species in \nAgua Chinon by Desired Habitat") +
+  scale_x_discrete(expand=c(0.15,0), labels = c("Elderberry\nScrubland", "Mulefat\nScrub", "Mulefat Scrub/\nSage Scrub", "Oak\nRiparian", "Roadside\nBuffer", "Weedy\nControl")) +
+  scale_y_continuous(expand=c(0,0), limits = c(0,300)) +
+  theme_grey() +
+  theme(axis.text.x = element_text(angle = -45, hjust = 0), plot.title=element_text(face="bold"), axis.title = element_text(face="bold"))
+
+plot3
+
+```
+
+
+
+
+

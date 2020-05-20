@@ -1,0 +1,168 @@
+---
+title: "R_Homework_2_RK"
+author: "Rachel Kenny"
+date: "4/27/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Load packages
+```{r packages}
+
+library(tidyverse) 
+library(readxl)
+library(readr)
+library(janitor) 
+
+```
+
+## Load data
+```{r data}
+
+# Load agua chinon vegetation transect data
+ac_data_raw <- read_xlsx("OCWR_AC_2019_Data.xlsx") 
+ac_data <- clean_names(ac_data_raw)
+
+# Load oak restoration data
+oak_data_raw <- read_csv("Weir_Oak_Restoration_Data_winter19_2.csv")
+oak_data <- clean_names(oak_data_raw)
+
+```
+
+## Refer to specific columns
+```{r columns}
+
+# Refer to height columns (2 ways)
+oak_data$height_cm
+oak_data[4]
+
+# Refer to location_uml through sampling group
+oak_data[6:8]
+
+# Refer to columns 2,5,6,7
+oak_data[c(2,5,6,7)]
+
+# Refer to all columns except 3 and 8
+oak_data[-c(3,8)]
+
+```
+
+## Change the names of columns and observations
+```{r change_names}
+
+# Create a new dataframe with the oak data
+oak_data2 <- oak_data
+
+# Change the names in the sampling groups from short form to long form
+oak_data2$sampling_group[which(oak_data2$sampling_group=="L_C")] <- "lower_closed"
+
+oak_data2$sampling_group[which(oak_data2$sampling_group=="L_O")] <- "lower_open"
+
+oak_data2$sampling_group[which(oak_data2$sampling_group=="M_C")] <- "middle_closed"
+
+oak_data2$sampling_group[which(oak_data2$sampling_group=="M_O")] <- "middle_open"
+
+oak_data2$sampling_group[which(oak_data2$sampling_group=="U_C")] <- "upper_closed"
+
+oak_data2$sampling_group[which(oak_data2$sampling_group=="U_O")] <- "upper_open"
+
+# Rename columns 7 (four methods) Note - We must reset the dataframe every time we use another method to rename the data
+
+# Method 1
+oak_data2 <- oak_data
+names(oak_data2)[7] <- "supplementary_watering" 
+
+# Method 2
+oak_data2 <- oak_data
+colnames(oak_data2)[7] <- "supplementary_watering"
+
+# Method 3
+oak_data2 <- oak_data
+rename(oak_data2, "supplementary_watering" = "water_yes_no")
+
+# Method 4
+oak_data2 <- oak_data
+oak_data2 %>% 
+  rename("supplementary_watering" = "water_yes_no")
+
+```
+
+## Create new columns
+```{r create_columns}
+
+# Create a new dataframe with the agua chinon data
+ac_data2 <- ac_data
+
+# Create a new column using "$" that divides pin number by two
+ac_data2$pin2 <- ac_data2$pin_number/2
+
+# Create a new column using mutate() that returns a 1 for native species and a 0 for anything else
+ac_data2 %>% 
+  mutate(binary_native_non = ifelse(native_non_native == "Native", 1,0))
+
+# Create a new column that rounds the numbers in step 1
+ac_data2$pin2round <- round(ac_data2$pin2)
+
+```
+
+## Create tables
+```{r tables}
+
+# Diversity1 table
+ac_data %>% 
+  filter(data_type == "T.PI") %>% 
+  group_by(polygon_id, transect, native_non_native) %>% 
+  count(species_code)
+
+# Functional1 table
+func1 <- ac_data %>% 
+  filter(data_type == "T.PI", native_non_native == "Native") %>% 
+  group_by(polygon_id, transect) %>% 
+  count(functional_group)
+
+```
+
+## Create plots
+```{r plot}
+
+# Plot 1
+plot1 <- ggplot(ac_data, aes(layer, fill=functional_group)) +
+  geom_bar(position="dodge") +
+  xlab("Layer") +
+  ylab("Count") +
+  ggtitle("Vegetation at Agua Chinon by layer and functional group") +
+  scale_x_discrete(expand=c(0.2,0), labels = c("No vegetation", "Herb", "Large\nshrub/tree", "Shrub")) +
+  scale_y_continuous(expand=c(0,0)) +
+  theme_classic() +
+  theme(plot.title=element_text(face="bold"), axis.text.x = element_text(size = 8), legend.text = element_text(size = 6), panel.grid.major.y = element_line(colour = "grey"))+
+  scale_fill_manual(name="Functional Groups", labels = c("no vegetation", "Annual forb\n(late flowering)", "Annual forb\n(other)", "Forb", "Grass", "Large Shrub", "Perennial Forb\n(late flowering)", "Perennial Forb\n(other)", "Perennial Grass\n(other)", "Shrub", "Shrub\n(late flowering)", "Shrub\n(other)", "Tree"), values = c("#a6cd5b", "#752559", "#72bad3", "#eb4024", "#a66f5b", "#449d8b", "#eb8932", "#2c6b96", "#e8af3c", "#9c8dc3", "orchid3", "seagreen3", "yellow"))+
+  guides(fill=guide_legend(nrow=7))
+
+plot1
+
+
+# Plot 2 (Note that I am fixing the error with the capitalization of 5M Buffer in advance of making my plot)
+ac_data$polygon_id[which(ac_data$polygon_id=="5M Buffer")] <- "5M BUFFER"
+
+plot2 <- ggplot(ac_data, aes(polygon_id, fill=native_non_native)) +
+  geom_bar(position="fill") +
+  xlab("Polygon ID") +
+  ylab("Count") +
+  ggtitle("Vegetation at Agua Chinon by native status") +
+  scale_x_discrete(expand=c(0.1,0)) +
+  scale_y_continuous(expand=c(0,0)) +
+  theme_classic() +
+  theme(plot.title=element_text(face="bold"), axis.text.x = element_text(size = 7, angle = 90, hjust = 1, vjust = .5), legend.text = element_text(size = 10), panel.grid.major.y = element_line(colour = "grey"))+
+  scale_fill_manual(name="Legend", labels = c("Native", "No vegetation", "Non-native"), values = c("#a6cd5b", "azure3", "tomato2"))+
+  guides(fill=guide_legend(nrow=7))
+
+plot2
+
+```
+
+
+

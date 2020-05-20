@@ -1,0 +1,343 @@
+---
+title: "r_homework_2"
+author: "Collin"
+date: "4/9/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Load Packages
+
+```{r package}
+
+library(tidyverse) 
+library(rmarkdown) 
+library(readxl)
+library(janitor) 
+
+
+```
+
+##Load Data
+
+```{r load data}
+
+ac_data_raw <- read_xlsx("OCWR_AC_2019_Data.xlsx")
+
+ac_data <- ac_data_raw %>% 
+  clean_names()
+
+ac_data$polygon_id[which(ac_data$polygon_id=="5M Buffer")] <- "5M BUFFER"
+
+view(ac_data)
+
+#names(ac_data)
+
+oak_data_raw <- read_csv("Weir_Oak_Restoration_Data_winter19_2.csv")
+
+oak_data <- oak_data_raw %>% 
+  clean_names()
+
+#view(oak_data)
+
+#names(oak_data)
+
+```
+
+##Refer to Specific columns
+
+```{r columns}
+
+#display height column two ways
+
+oak_data$height_cm
+
+oak_data[4]
+
+#display location_uml through sampling group
+
+oak_data[6:8]
+
+#Display columns 2, 5, 6, 7
+
+oak_data %>% 
+  select(2, 5, 6, 7)
+
+#Display how to refer to every column except for 3 and 8
+
+oak_data %>% 
+  select(-3, -8)
+
+
+```
+
+##Change names of columns and observations
+
+```{r change names}
+
+#create new dataframe - oak_data2
+
+oak_data2 <- oak_data
+
+#view(oak_data2)
+
+oak_data2$sampling_group[which(oak_data2$sampling_group=="L_C")] <- "lower_closed"
+
+oak_data2$sampling_group[which(oak_data2$sampling_group=="M_C")] <- "middle_closed"
+
+oak_data2$sampling_group[which(oak_data2$sampling_group=="U_C")] <- "upper_closed"
+
+oak_data2$sampling_group[which(oak_data2$sampling_group=="L_O")] <- "lower_open"
+
+oak_data2$sampling_group[which(oak_data2$sampling_group=="M_O")] <- "middle_open"
+
+oak_data2$sampling_group[which(oak_data2$sampling_group=="U_O")] <- "upper_open"
+
+colnames(oak_data2)[7] <- "supplementary"
+
+#view(oak_data2)
+
+## GOOGLE THIS LATER
+
+#oak_data2$sampling_group[which(oak_data2$sampling_group %in% c("L_C", "M_C", "U_C", "L_O", "M_O", "U_O"))] <- c("lower_closed", "middle_closed", "upper_closed", "lower_open", "middle_open", "upper_open")
+  
+
+
+
+```
+
+
+##Create new columns
+
+```{r new_columns}
+
+
+ac_data2 <- ac_data
+ac_data2$pin_number_2 <- ac_data2$pin_number/2
+
+#view(ac_data2)
+
+ac_data3 <- ac_data2 %>% 
+  mutate(new_column=native_non_native)
+
+ac_data3$new_column[which(ac_data3$new_column=="Native")] <- "1"
+
+ac_data3$new_column[which(ac_data3$new_column=="Non-Native")] <- "0"
+
+ac_data3$new_column[which(ac_data3$new_column=="No_Native")] <- "."
+
+ac_data3$pin_number_2_rounded <- round(ac_data3$pin_number_2)
+
+#view(ac_data3)
+
+```
+
+##Create tables
+
+```{r tables}
+
+diversity1 <- ac_data %>% 
+  filter(data_type ==	"T.PI") %>% 
+  filter(native_non_native %in% c("Native", "Non-Native")) %>% 
+  select(polygon_id, transect, native_non_native, species_code) %>% 
+  group_by(polygon_id, transect, native_non_native) %>% 
+  count(species_code)
+
+#view(diversity1)
+
+functional1 <- ac_data %>% 
+  filter(native_non_native == "Native") %>% 
+  filter(data_type ==	"T.PI") %>% 
+  select(polygon_id, transect, functional_group) %>% 
+  group_by(polygon_id, transect) %>% 
+  count(functional_group)
+
+#view(functional1)
+
+```
+
+##Practice with ggplots
+
+#questions: How to group functional group labels by layer
+
+```{r layer data}
+layer_plot_data <- ac_data %>% 
+  filter(native_non_native %in% c("Native", "Non-Native")) %>%
+  select(layer, functional_group, species_code) %>% 
+  group_by(layer, functional_group) %>% 
+  count(species_code)
+
+layer_plot_data$layer[which(layer_plot_data$layer==".")] <- "Non-Native"
+
+layer_plot_data$functional_group[which(layer_plot_data$functional_group=="Forb")] <- "Non-Native Forb"
+
+layer_plot_data$functional_group[which(layer_plot_data$functional_group=="Grass")] <- "Non-Native Grass"
+
+layer_plot_data$functional_group[which(layer_plot_data$functional_group=="Shrub")] <- "Non-Native Shrub"
+
+layer_plot_data[55, 1] = "Non-Native"
+
+#view(layer_plot_data)
+
+```
+
+```{r sidebyside_plot}
+
+View(layer_plot_data)
+
+layer_plot_side <- ggplot(layer_plot_data, aes(fill = functional_group, y = n, x = layer)) + 
+  geom_bar(position="dodge", stat="identity") + 
+  theme_classic() + 
+  ggtitle(label = "Functional Group Abundance by Layer")+
+  xlab ("Layer")+
+  ylab("Total Native Plant Count") +
+  labs(fill = "Functional Group") +
+  scale_x_discrete(expand=c(0.3,0))+
+  scale_y_continuous(expand=c(0,0))+
+  theme(axis.title.y = element_text(size = 10), plot.title = element_text(hjust = 0.5, face = "bold", size = 16)) + 
+  scale_fill_manual(breaks=c("Annual forb\n(late flowering)", "Annual forb\n(other)", "Forb", "Grass", "Large Shrub", "Perennial Forb\n(late flowering)", "Perennial Forb\n(other)", "Perennial Grass\n(other)", "Shrub", "Shrub\n(late flowering)", "Shrub\n(other)", "Tree"), values = c("palegreen", "palegreen4", "turquoise", "firebrick1", "indianred2", "indianred3", "yellowgreen", "limegreen", "lawngreen", "darkorange4", "peru", "steelblue4"))
+
+
+iris$Species <- factor(iris$Species, levels = c("virginica", "versicolor", "setosa"))
+
+ scale_fill_discrete(breaks=c("trt1","ctrl","trt2"))  
+
+layer_plot_side
+
+```
+
+##QUESTION - how do you change the order of the legend? There is one issue with the "herb" layer...one non-native point is labeled as herb not Non-Native - I manually fixed it but is there a better way?
+
+```{r stacked_plot}
+
+layer_plot_stack <- ggplot(layer_plot_data, aes(fill = functional_group, y = n, x = layer)) + 
+  geom_bar(position="stack", stat="identity") + 
+  theme_classic() + 
+  ggtitle(label = "Functional Group Abundance by Layer")+
+  xlab ("Layer")+
+  ylab("Total Native Plant Count") +
+  labs(fill = "Functional Group") +
+  scale_x_discrete(expand=c(0.3,0))+
+  scale_y_continuous(expand=c(0,0))+
+  theme(axis.title.y = element_text(size = 10), plot.title = element_text(hjust = 0.5))+
+  scale_fill_manual(values = c("palegreen", "palegreen4", "turquoise", "firebrick1", "indianred2", "indianred3", "yellowgreen", "limegreen", "lawngreen", "darkorange4", "peru", "steelblue4"))
+
+layer_plot_stack
+
+
+
+```
+```{r stacked_plot_normalized}
+
+layer_plot_stacked_normalized <- ggplot(layer_plot_data, aes(fill = functional_group, y = n, x = layer)) + 
+  geom_bar(position="fill", stat="identity") + 
+  theme_classic() + 
+  ggtitle(label = "Functional Group Abundance by Layer")+
+  xlab ("Layer")+
+  ylab("Functional Group %") +
+  labs(fill = "Functional Group") +
+  scale_x_discrete(expand=c(0.3,0))+
+  scale_y_continuous(expand=c(0,0))+
+  theme(axis.title.y = element_text(size = 10), plot.title = element_text(hjust = 0.5))+
+  scale_fill_manual(values = c("palegreen", "palegreen4", "turquoise", "firebrick1", "indianred2", "indianred3", "yellowgreen", "limegreen", "lawngreen", "darkorange4", "peru", "steelblue4"))
+
+layer_plot_stacked_normalized
+
+```
+```{r non_native}
+
+ac_data_nn <- ac_data %>% 
+  filter(native_non_native == "Non-Native") %>% 
+  filter(data_type == "T.PI") %>% 
+  count(species_code) %>% 
+  filter(n >= 10) %>% 
+  arrange(desc(n))
+
+#view(ac_data_nn)
+
+
+non_native_pie <- ggplot(ac_data_nn, aes(fill = species_code, y = n, x = "")) + 
+  geom_bar(width=1, stat="identity") + 
+  theme_void() + 
+  coord_polar("y", start=0) + 
+  geom_text(aes(label= n),position = position_stack(vjust = 0.5), color = "black", size=2.5) +
+  scale_fill_brewer(palette="Set1") +
+  ggtitle(label = "Non-Native Plants", subtitle= "Count of plants with 10 or more observations")+
+  labs(fill = "Species Code") +
+  theme(plot.title = element_text(hjust = 0.5, face="bold"), plot.subtitle=element_text(size=8, face="italic", hjust = 0.5), panel.grid = element_blank(), axis.title = element_blank(), axis.title.y = element_blank(), axis.text = element_blank(), axis.ticks = element_blank(), panel.background = element_blank())
+  
+non_native_pie
+
+  
+  
+  
+```
+
+
+## RK fixes
+
+## Re-ordering legend items
+```{r}
+
+#Re-ordering legend items
+
+layer_plot_side2 <- ggplot(layer_plot_data, aes(fill = functional_group, y = n, x = layer)) + 
+  geom_bar(position="dodge", stat="identity") + 
+  theme_classic() + 
+  ggtitle(label = "Functional Group Abundance by Layer")+
+  xlab ("Layer")+
+  ylab("Total Native Plant Count") +
+  labs(fill = "Functional Group") +
+  scale_x_discrete(expand=c(0.3,0))+
+  scale_y_continuous(expand=c(0,0))+
+  theme(axis.title.y = element_text(size = 10), plot.title = element_text(hjust = 0.5, face = "bold", size = 16)) + 
+  scale_fill_manual(values = c("palegreen", "palegreen4", "yellowgreen", "limegreen", "lawngreen", "turquoise", "steelblue4", "firebrick1", "indianred2", "indianred3", "darkorange4", "peru"), breaks=c("Annual Forb - Late Flowering","Annual Forb - Other","Perennial Forb - Late Flowering", "Perennial Forb - Other", "Perennial Grass - Other", "Large Shrub", "Tree", "Non-Native Forb", "Non-Native Grass", "Non-Native Shrub", "Shrub - Late Flowering", "Shrub - Other")) # Define breaks in the order you wish them to appear. Make sure to spell them perfectly. NOTE you must then reorder your colors accordingly
+
+layer_plot_side2
+
+```
+
+## Fixing data errors
+```{r fix}
+
+#load data
+ac_data_raw2 <- read_xlsx("OCWR_AC_2019_Data_example.xlsx") 
+ac_data2 <- clean_names(ac_data_raw2)
+
+View(ac_data_raw2)
+
+#Use ifelse statement to create new column with fixed data
+ac_data3 <- ac_data2 %>% 
+  mutate(new_column = ifelse(native_non_native == "Non-Native" & layer == "herb",".",layer))
+         
+View(ac_data3)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
